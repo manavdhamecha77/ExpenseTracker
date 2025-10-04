@@ -110,6 +110,83 @@ class ReceiptExtractor {
   }
 }
 
+
+import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
+
+/**
+ * Simple Gemini wrapper to analyze OCR text and extract receipt data
+ * @param {string} rawOcrText - Raw text from OCR
+ * @returns {Promise<object>} - Parsed receipt data
+ */
+async function GeminiWrapper(rawOcrText) {
+  const model = new ChatGoogleGenerativeAI({
+    model: "gemini-2.0-flash",
+    apiKey: process.env.GOOGLE_API_KEY,
+    temperature: 0, // Make output more deterministic
+  });
+
+  const prompt = `You are an expert at analyzing receipts. Extract the following information from this receipt text and return it as a JSON object:
+
+{
+  "total_amount": "string (final total like '12.34')",
+  "transaction_date": "string (YYYY-MM-DD format, assume 2025 if year missing)",
+  "category": "string (choose from: 'Food & Dining', 'Groceries', 'Travel', 'Shopping', 'General')",
+  "line_items": [
+    {
+      "itemName": "string",
+      "quantity": number,
+      "price": "string"
+    }
+  ]
+}
+
+Rules:
+- Return ONLY valid JSON, no extra text
+- Use empty string "" for missing text fields
+- Use empty array [] if no line items found
+- Ensure the total_amount is the final grand total
+- If unsure about category, use "General"
+
+Receipt text:
+${rawOcrText}`;
+
+  try {
+    console.log("Calling Gemini API...");
+    const result = await model.invoke(prompt);
+    
+    // Parse the JSON response
+    const jsonText = result.content.trim();
+    var parsedData;
+    
+    console.log(jsonText);
+    try {
+        parsedData = JSON.parse(jsonText);
+    }
+    catch (err) {
+        parsedData = JSON.parse(jsonText.slice(7, jsonText.length-3));
+    }
+    // Ensure we have the right structure with fallbacks
+    const data = {
+      total_amount: parsedData.total_amount || '',
+      transaction_date: parsedData.transaction_date || '',
+      category: parsedData.category || 'General',
+      line_items: Array.isArray(parsedData.line_items) ? parsedData.line_items : []
+    };
+    
+    // If no line items, add default empty one
+    if (data.line_items.length === 0) {
+      data.line_items.push({ itemName: '', quantity: 1, price: '' });
+    }
+    
+    console.log("Gemini parsing successful");
+    return data;
+    
+  } catch (error) {
+    console.error("Gemini parsing error:", error);
+    throw new Error("AI parsing failed");
+  }
+}
+
 /**
  * This is the Next.js Server Action. It runs securely on the server.
  * It handles the file upload, calls the OCR service with a secret API key,
@@ -125,9 +202,11 @@ export async function scanAndFillForm(prevState, formData) {
     return { status: 'error', message: 'Please provide a valid receipt file.' };
   }
 
-  // Securely access the API key from server-side environment variables.
-  const apiKey = process.env.OCR_API_KEY;
-  if (!apiKey) {
+  // Securely access the API keys from server-side environment variables.
+  const ocrApiKey = process.env.OCR_API_KEY;
+  const googleApiKey = process.env.GOOGLE_API_KEY;
+  
+  if (!ocrApiKey) {
     console.error('OCR_API_KEY is not set in the environment variables.');
     return { status: 'error', message: 'OCR API key is not configured on the server. Please contact support.' };
   }
@@ -142,7 +221,7 @@ export async function scanAndFillForm(prevState, formData) {
     // 1. Call the external OCR API
     const response = await fetch('https://api.ocr.space/parse/image', {
       method: 'POST',
-      headers: { 'apikey': apiKey },
+      headers: { 'apikey': ocrApiKey },
       body: ocrFormData,
     });
 
@@ -160,12 +239,31 @@ export async function scanAndFillForm(prevState, formData) {
       throw new Error('The OCR service could not extract any text from the image.');
     }
 
-    // 2. Parse the extracted text to get structured data
-    const extractor = new ReceiptExtractor(parsedText);
-    const data = extractor.getAll();
+    // 2. Parse the extracted text using AI or fallback to regex parsing
+    let data;
+    let successMessage = 'Form filled successfully!';
+    
+    // Try Gemini AI first if Google API key is available
+    if (googleApiKey) {
+      try {
+        console.log('Using Gemini AI for intelligent parsing...');
+        data = await GeminiWrapper(parsedText);
+        successMessage = 'Form filled successfully using AI analysis!';
+      } catch (geminiError) {
+        console.warn('Gemini AI parsing failed, falling back to regex parsing:', geminiError.message);
+        const extractor = new ReceiptExtractor(parsedText);
+        data = extractor.getAll();
+        successMessage = 'Form filled successfully using fallback parsing!';
+      }
+    } else {
+      console.log('Google API key not found, using regex parsing...');
+      const extractor = new ReceiptExtractor(parsedText);
+      data = extractor.getAll();
+      successMessage = 'Form filled successfully using regex parsing!';
+    }
     
     // 3. Return a success state with the data
-    return { status: 'success', message: 'Form filled successfully!', data: data };
+    return { status: 'success', message: successMessage, data: data };
 
   } catch (error) {
     console.error('Error in Server Action:', error);
