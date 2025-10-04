@@ -1,10 +1,9 @@
 import { Inter, Poppins, Playfair_Display } from 'next/font/google'
 import { getServerSession } from 'next-auth'
 import SessionProviderWrapper from '@/components/SessionProvider'
-import Navbar from '@/components/Navbar'
-import Footer from '@/components/Footer'
 import { Toaster } from '@/components/ui/toaster'
 import { authOptions } from '@/app/api/auth/[...nextauth]/route'
+import ConditionalLayout from '@/components/ConditionalLayout'
 import '@/styles/globals.css'
 
 const inter = Inter({ 
@@ -41,13 +40,9 @@ export default async function RootLayout({ children }) {
     <html lang="en" className={`${inter.variable} ${poppins.variable} ${playfair.variable}`}>
       <body className={inter.className}>
         <SessionProviderWrapper session={session}>
-          <div className="min-h-screen bg-background flex flex-col">
-            <Navbar />
-            <main className="pt-16 flex-1">
-              {children}
-            </main>
-            <Footer />
-          </div>
+          <ConditionalLayout>
+            {children}
+          </ConditionalLayout>
           <Toaster />
         </SessionProviderWrapper>
       </body>

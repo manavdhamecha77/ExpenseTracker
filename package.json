@@ -13,6 +13,8 @@
     "postinstall": "prisma generate"
   },
   "dependencies": {
+    "@langchain/core": "^0.3.78",
+    "@langchain/google-genai": "^0.2.18",
     "@next-auth/prisma-adapter": "^1.0.7",
     "@prisma/client": "^5.6.0",
     "@radix-ui/react-avatar": "^1.0.4",
@@ -38,7 +40,8 @@
     "react-dom": "^19.2.0",
     "tailwind-merge": "^2.0.0",
     "tailwindcss": "^3.4.18",
-    "tailwindcss-animate": "^1.0.7"
+    "tailwindcss-animate": "^1.0.7",
+    "zod": "^4.1.11"
   },
   "devDependencies": {
     "eslint": "^9.36.0",

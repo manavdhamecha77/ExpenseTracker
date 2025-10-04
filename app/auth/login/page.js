@@ -152,10 +152,10 @@ export default function LoginPage() {
 
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-accent/5 via-accent/10 to-accent/20 flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <div className="mx-auto mb-4 w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center">
+          <div className="mx-auto mb-4 w-12 h-12 bg-accent rounded-full flex items-center justify-center">
             <Building2 className="h-6 w-6 text-white" />
           </div>
           <CardTitle className="text-2xl font-bold">Sign In</CardTitle>
@@ -256,19 +256,26 @@ export default function LoginPage() {
               )}
             </Button>
             
-            <div className="text-center space-y-2">
-              <p className="text-sm text-gray-600">
-                Don't have an account?
-              </p>
-              <div className="flex flex-col space-y-2">
+            <div className="text-center space-y-4">
+              <div className="border-t pt-4">
+                <p className="text-sm text-gray-600 mb-3">
+                  Don't have a company account yet?
+                </p>
                 <Link href="/onboard">
                   <Button variant="outline" className="w-full">
                     <UserPlus className="h-4 w-4 mr-2" />
                     Create New Company
                   </Button>
                 </Link>
+                <p className="text-xs text-gray-500 mt-2">
+                  Set up your company's expense management system
+                </p>
+              </div>
+              
+              <div className="border-t pt-4">
                 <p className="text-xs text-gray-500">
-                  Individual users cannot register directly. Contact your admin for account creation.
+                  Individual employees cannot register directly.<br/>
+                  Contact your company admin for account access.
                 </p>
               </div>
             </div>
