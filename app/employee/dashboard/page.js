@@ -1,43 +1,67 @@
-import { getServerSession } from 'next-auth'
-import { redirect } from 'next/navigation'
-import { authOptions } from '@/app/api/auth/[...nextauth]/route'
-import prisma from '@/lib/prisma'
+'use client'
+
+import { useSession } from 'next-auth/react'
+import { useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react'
 import ExpenseSubmissionForm from '@/components/ExpenseSubmissionForm'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { User, Mail, Calendar, Settings } from 'lucide-react'
 
-export default async function EmployeeDashboard() {
-  const session = await getServerSession(authOptions)
+export default function EmployeeDashboard() {
+  const { data: session, status } = useSession()
+  const router = useRouter()
+  const [recentExpenses, setRecentExpenses] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    if (status === 'loading') return
+    
+    if (!session) {
+      router.push('/auth/login')
+      return
+    }
+
+    // If not an employee, send to existing dashboard
+    if (session.user?.role && session.user.role !== 'EMPLOYEE') {
+      router.push('/dashboard')
+      return
+    }
+
+    // Fetch recent expenses
+    const fetchRecentExpenses = async () => {
+      try {
+        const response = await fetch('/api/expenses/recent')
+        if (response.ok) {
+          const data = await response.json()
+          setRecentExpenses(data)
+        }
+      } catch (error) {
+        console.error('Failed to fetch recent expenses:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchRecentExpenses()
+  }, [session, status, router])
+
+  if (status === 'loading' || loading) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="max-w-6xl mx-auto">
+          <div className="flex justify-center items-center h-64">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   if (!session) {
-    redirect('/auth/login')
+    return null
   }
-
-  // If not an employee, send to existing dashboard
-  if (session.user?.role && session.user.role !== 'EMPLOYEE') {
-    redirect('/dashboard')
-  }
-
-  const userId = session.user.id
-  const company = session.user.company
-
-  // Fetch recent expenses for the employee
-  const recentExpenses = await prisma.expense.findMany({
-    where: { submittedById: userId },
-    orderBy: { date: 'desc' },
-    take: 10,
-    select: {
-      id: true,
-      amount: true,
-      currency: true,
-      category: true,
-      description: true,
-      date: true,
-      status: true,
-    },
-  })
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -101,14 +125,14 @@ export default async function EmployeeDashboard() {
                 <span>Settings</span>
               </Button>
               <Button variant="outline" className="h-auto p-4 flex flex-col items-center">
-                <User className="h-8 w-8 mb-2" />
-                <span>Profile</span>
-              </Button>
-              <Button variant="outline" className="h-auto p-4 flex flex-col items-center" onClick={() => {}}>
                 <Calendar className="h-8 w-8 mb-2" />
                 <span>View Calendar</span>
               </Button>
-              <Button variant="outline" className="h-auto p-4 flex flex-col items-center" onClick={() => {}}>
+              <Button variant="outline" className="h-auto p-4 flex flex-col items-center">
+                <Mail className="h-8 w-8 mb-2" />
+                <span>Messages</span>
+              </Button>
+              <Button variant="outline" className="h-auto p-4 flex flex-col items-center" onClick={() => alert('Messages feature coming soon!')}>
                 <Mail className="h-8 w-8 mb-2" />
                 <span>Messages</span>
               </Button>

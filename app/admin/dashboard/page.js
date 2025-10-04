@@ -466,14 +466,14 @@ export default function AdminDashboardPage() {
               <div>
                 <Label htmlFor="manager">Assign Manager (Optional)</Label>
                 <Select
-                  value={newEmployee.managerId}
-                  onValueChange={(value) => setNewEmployee({ ...newEmployee, managerId: value })}
+                  value={newEmployee.managerId || 'none'}
+                  onValueChange={(value) => setNewEmployee({ ...newEmployee, managerId: value === 'none' ? '' : value })}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select manager" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">No Manager</SelectItem>
+                    <SelectItem value="none">No Manager</SelectItem>
                     {managers.map((manager) => (
                       <SelectItem key={manager.id} value={manager.id}>
                         {manager.name} ({manager.email})
