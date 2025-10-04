@@ -1,6 +1,6 @@
 'use client'
 
-import { useSession } from 'next-auth/react'
+import { useSession, SessionProvider } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import ExpenseSubmissionForm from '@/components/ExpenseSubmissionForm'
@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { User, Mail, Calendar, Settings } from 'lucide-react'
 
-export default function EmployeeDashboard() {
+function EmployeeDashboardClient() {
   const { data: session, status } = useSession()
   const router = useRouter()
   const [recentExpenses, setRecentExpenses] = useState([])
@@ -188,5 +188,13 @@ export default function EmployeeDashboard() {
         </Card>
       </div>
     </div>
+  )
+}
+
+export default function EmployeeDashboard() {
+  return (
+    <SessionProvider basePath="/api/auth">
+      <EmployeeDashboardClient />
+    </SessionProvider>
   )
 }

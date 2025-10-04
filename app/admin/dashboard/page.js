@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { useSession } from 'next-auth/react'
+import { useSession, SessionProvider } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -30,7 +30,7 @@ import {
   XCircle,
 } from 'lucide-react'
 
-export default function AdminDashboardPage() {
+function AdminDashboardClient() {
   const { data: session, status } = useSession()
   const router = useRouter()
   const [loading, setLoading] = useState(false)
@@ -512,5 +512,13 @@ export default function AdminDashboardPage() {
         </div>
       )}
     </div>
+  )
+}
+
+export default function AdminDashboardPage() {
+  return (
+    <SessionProvider basePath="/api/auth">
+      <AdminDashboardClient />
+    </SessionProvider>
   )
 }
