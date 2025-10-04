@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { signIn } from 'next-auth/react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -151,14 +152,29 @@ export default function OnboardingFlow() {
       const result = await response.json()
       
       if (response.ok) {
-        toast({
-          title: "Company Created Successfully!",
-          description: `Your company ID is: ${companyId}. Please save this for future logins.`,
-          duration: 8000,
+        // Automatically sign in the user
+        const signInResult = await signIn('credentials', {
+          email: formData.adminEmail,
+          password: formData.adminPassword,
+          redirect: false,
         })
         
-        // Redirect to login with company ID pre-filled
-        router.push(`/auth/login?companyId=${companyId}`)
+        if (signInResult?.ok) {
+          toast({
+            title: "Company Created Successfully!",
+            description: `Welcome to your admin dashboard!`,
+            duration: 5000,
+          })
+          
+          // Redirect directly to admin dashboard
+          router.push('/admin/dashboard')
+        } else {
+          toast({
+            title: "Company Created",
+            description: "Please sign in to access your dashboard.",
+          })
+          router.push('/auth/login')
+        }
       } else {
         toast({
           title: "Error",
