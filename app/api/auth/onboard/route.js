@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import prisma from '@/lib/prisma'
 import bcryptjs from 'bcryptjs'
 import { approvalWorkflowService } from '@/lib/approval-workflow'
 
@@ -102,13 +102,28 @@ export async function POST(request) {
     return NextResponse.json({
       success: true,
       companyId: result.company.id,
+      adminUser: {
+        id: result.adminUser.id,
+        email: result.adminUser.email,
+        name: result.adminUser.name,
+        role: result.adminUser.role,
+      },
       message: 'Company and admin account created successfully'
     })
 
   } catch (error) {
     console.error('Onboarding error:', error)
+    const isProd = process.env.NODE_ENV === 'production'
+    const payload = isProd
+      ? { error: 'Internal server error' }
+      : {
+          error: 'Internal server error',
+          details: error?.message || String(error),
+          code: error?.code,
+          meta: error?.meta,
+        }
     return NextResponse.json(
-      { error: 'Internal server error' },
+      payload,
       { status: 500 }
     )
   }
