@@ -1,7 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -9,22 +10,9 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Progress } from '@/components/ui/progress'
 import { Badge } from '@/components/ui/badge'
-import { Building2, User, MapPin, CreditCard, CheckCircle, ArrowLeft, ArrowRight, Eye, EyeOff } from 'lucide-react'
+import { Building2, User, MapPin, CreditCard, CheckCircle, ArrowLeft, ArrowRight, Eye, EyeOff, Loader2, LogIn } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
-
-// Country and Currency data
-const COUNTRIES_WITH_CURRENCIES = [
-  { code: 'US', name: 'United States', currency: 'USD', symbol: '$' },
-  { code: 'GB', name: 'United Kingdom', currency: 'GBP', symbol: '£' },
-  { code: 'EU', name: 'European Union', currency: 'EUR', symbol: '€' },
-  { code: 'IN', name: 'India', currency: 'INR', symbol: '₹' },
-  { code: 'CA', name: 'Canada', currency: 'CAD', symbol: 'C$' },
-  { code: 'AU', name: 'Australia', currency: 'AUD', symbol: 'A$' },
-  { code: 'JP', name: 'Japan', currency: 'JPY', symbol: '¥' },
-  { code: 'CN', name: 'China', currency: 'CNY', symbol: '¥' },
-  { code: 'SG', name: 'Singapore', currency: 'SGD', symbol: 'S$' },
-  { code: 'AE', name: 'United Arab Emirates', currency: 'AED', symbol: 'د.إ' }
-]
+import { useCurrencies } from '@/hooks/use-currencies'
 
 const STEPS = [
   { id: 1, name: 'Company Details', icon: Building2, description: 'Basic company information' },
@@ -40,6 +28,7 @@ export default function OnboardingFlow() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const router = useRouter()
   const { toast } = useToast()
+  const { currencies: availableCurrencies, countries, loading: loadingCountries } = useCurrencies()
 
   const [formData, setFormData] = useState({
     // Company Details
@@ -116,13 +105,24 @@ export default function OnboardingFlow() {
   }
 
   const handleCountryChange = (countryCode) => {
-    const selectedCountry = COUNTRIES_WITH_CURRENCIES.find(c => c.code === countryCode)
+    const selectedCountry = countries.find(c => c.code === countryCode)
     if (selectedCountry) {
       setFormData(prev => ({
         ...prev,
         country: countryCode,
         currency: selectedCountry.currency,
-        currencySymbol: selectedCountry.symbol
+        currencySymbol: selectedCountry.currencySymbol
+      }))
+    }
+  }
+
+  const handleCurrencyChange = (currencyCode) => {
+    const selectedCurrency = availableCurrencies.find(c => c.code === currencyCode)
+    if (selectedCurrency) {
+      setFormData(prev => ({
+        ...prev,
+        currency: currencyCode,
+        currencySymbol: selectedCurrency.symbol
       }))
     }
   }
@@ -307,6 +307,17 @@ export default function OnboardingFlow() {
         )
       
       case 3:
+        if (loadingCountries) {
+          return (
+            <div className="space-y-4">
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin mr-2" />
+                <span>Loading countries and currencies...</span>
+              </div>
+            </div>
+          )
+        }
+        
         return (
           <div className="space-y-4">
             <div>
@@ -316,9 +327,12 @@ export default function OnboardingFlow() {
                   <SelectValue placeholder="Select your country" />
                 </SelectTrigger>
                 <SelectContent>
-                  {COUNTRIES_WITH_CURRENCIES.map((country) => (
+                  {countries.map((country) => (
                     <SelectItem key={country.code} value={country.code}>
-                      {country.name}
+                      <div className="flex items-center space-x-2">
+                        <span>{country.flag}</span>
+                        <span>{country.name}</span>
+                      </div>
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -326,9 +340,32 @@ export default function OnboardingFlow() {
               {errors.country && <p className="text-red-500 text-sm mt-1">{errors.country}</p>}
             </div>
             
+            <div>
+              <Label htmlFor="currency">Company Currency *</Label>
+              <Select value={formData.currency} onValueChange={handleCurrencyChange}>
+                <SelectTrigger className={errors.currency ? 'border-red-500' : ''}>
+                  <SelectValue placeholder="Select your company's default currency" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableCurrencies.map((currency) => (
+                    <SelectItem key={currency.code} value={currency.code}>
+                      <div className="flex items-center justify-between w-full">
+                        <span>{currency.code} - {currency.name}</span>
+                        <Badge variant="secondary">{currency.symbol}</Badge>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {errors.currency && <p className="text-red-500 text-sm mt-1">{errors.currency}</p>}
+              <p className="text-sm text-gray-500 mt-1">
+                You can choose a different currency than your country's default currency
+              </p>
+            </div>
+            
             {formData.currency && (
               <div>
-                <Label>Default Currency</Label>
+                <Label>Selected Currency</Label>
                 <div className="flex items-center space-x-2 p-3 border rounded-md bg-gray-50">
                   <CreditCard className="h-4 w-4 text-gray-500" />
                   <span className="font-medium">{formData.currency}</span>
@@ -370,7 +407,7 @@ export default function OnboardingFlow() {
               </div>
               <div className="flex justify-between">
                 <span className="font-medium">Country:</span>
-                <span>{COUNTRIES_WITH_CURRENCIES.find(c => c.code === formData.country)?.name}</span>
+                <span>{countries.find(c => c.code === formData.country)?.name}</span>
               </div>
               <div className="flex justify-between">
                 <span className="font-medium">Currency:</span>
@@ -378,8 +415,8 @@ export default function OnboardingFlow() {
               </div>
             </div>
             
-            <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-              <p className="text-sm text-blue-800">
+            <div className="p-4 bg-accent/10 border border-accent/30 rounded-lg">
+              <p className="text-sm text-accent">
                 <strong>Important:</strong> After creation, you'll receive a unique Company ID. 
                 Save this ID as all users will need it to log in to your company's expense system.
               </p>
@@ -393,7 +430,7 @@ export default function OnboardingFlow() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-accent/5 via-accent/10 to-accent/20 flex items-center justify-center p-4">
       <Card className="w-full max-w-2xl">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-bold">Company Onboarding</CardTitle>
@@ -408,7 +445,7 @@ export default function OnboardingFlow() {
                   <div
                     className={`w-8 h-8 rounded-full flex items-center justify-center ${
                       currentStep >= step.id
-                        ? 'bg-blue-600 text-white'
+                        ? 'bg-accent text-white'
                         : 'bg-gray-200 text-gray-500'
                     }`}
                   >
@@ -434,37 +471,52 @@ export default function OnboardingFlow() {
           {renderStepContent()}
         </CardContent>
         
-        <CardFooter className="flex justify-between">
-          <Button
-            variant="outline"
-            onClick={handlePrevious}
-            disabled={currentStep === 1}
-            className="flex items-center"
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Previous
-          </Button>
+        <CardFooter className="flex flex-col space-y-4">
+          <div className="flex justify-between w-full">
+            <Button
+              variant="outline"
+              onClick={handlePrevious}
+              disabled={currentStep === 1}
+              className="flex items-center"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Previous
+            </Button>
           
-          {currentStep < STEPS.length ? (
-            <Button onClick={handleNext} className="flex items-center">
-              Next
-              <ArrowRight className="h-4 w-4 ml-2" />
-            </Button>
-          ) : (
-            <Button onClick={handleSubmit} disabled={loading} className="flex items-center">
-              {loading ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                  Creating...
-                </>
-              ) : (
-                <>
-                  Create Company
-                  <CheckCircle className="h-4 w-4 ml-2" />
-                </>
-              )}
-            </Button>
-          )}
+            {currentStep < STEPS.length ? (
+              <Button onClick={handleNext} className="flex items-center">
+                Next
+                <ArrowRight className="h-4 w-4 ml-2" />
+              </Button>
+            ) : (
+              <Button onClick={handleSubmit} disabled={loading} className="flex items-center">
+                {loading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Creating...
+                  </>
+                ) : (
+                  <>
+                    Create Company
+                    <CheckCircle className="h-4 w-4 ml-2" />
+                  </>
+                )}
+              </Button>
+            )}
+          </div>
+          
+          {/* Navigation to Login */}
+          <div className="text-center border-t pt-4">
+            <p className="text-sm text-gray-600 mb-2">
+              Already have a company account?
+            </p>
+            <Link href="/auth/login">
+              <Button variant="outline" className="flex items-center mx-auto">
+                <LogIn className="h-4 w-4 mr-2" />
+                Sign In to Existing Company
+              </Button>
+            </Link>
+          </div>
         </CardFooter>
       </Card>
     </div>

@@ -91,7 +91,7 @@ export default function Navbar() {
                     Log In
                   </Button>
                 </Link>
-                <Link href="/auth/register">
+                <Link href="/onboard">
                   <Button className="bg-accent hover:bg-accent/90 text-white">
                     Sign Up Free
                   </Button>

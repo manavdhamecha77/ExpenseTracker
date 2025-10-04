@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { Button } from '@/components/ui/button'
@@ -8,8 +8,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Receipt, DollarSign, Calendar, FileText, Send } from 'lucide-react'
+import { Receipt, DollarSign, Calendar, FileText, Send, Loader2 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
+import { useCurrencies } from '@/hooks/use-currencies'
 
 // Common expense categories
 const EXPENSE_CATEGORIES = [
@@ -25,22 +26,11 @@ const EXPENSE_CATEGORIES = [
   'Other'
 ]
 
-// Common currencies
-const CURRENCIES = [
-  { code: 'USD', symbol: '$', name: 'US Dollar' },
-  { code: 'EUR', symbol: '€', name: 'Euro' },
-  { code: 'GBP', symbol: '£', name: 'British Pound' },
-  { code: 'INR', symbol: '₹', name: 'Indian Rupee' },
-  { code: 'CAD', symbol: 'C$', name: 'Canadian Dollar' },
-  { code: 'AUD', symbol: 'A$', name: 'Australian Dollar' },
-  { code: 'JPY', symbol: '¥', name: 'Japanese Yen' },
-  { code: 'SGD', symbol: 'S$', name: 'Singapore Dollar' }
-]
-
 export default function ExpenseSubmissionForm() {
   const { data: session } = useSession()
   const router = useRouter()
   const { toast } = useToast()
+  const { currencies, loading: loadingCurrencies } = useCurrencies()
   
   const [formData, setFormData] = useState({
     amount: '',
@@ -194,7 +184,7 @@ export default function ExpenseSubmissionForm() {
     }
   }
 
-  const selectedCurrency = CURRENCIES.find(c => c.code === formData.currency)
+  const selectedCurrency = currencies.find(c => c.code === formData.currency)
 
   return (
     <Card className="w-full max-w-2xl mx-auto">
@@ -231,14 +221,28 @@ export default function ExpenseSubmissionForm() {
             
             <div>
               <Label htmlFor="currency">Currency</Label>
-              <Select value={formData.currency} onValueChange={(value) => handleInputChange('currency', value)}>
+              <Select 
+                value={formData.currency} 
+                onValueChange={(value) => handleInputChange('currency', value)}
+                disabled={loadingCurrencies}
+              >
                 <SelectTrigger>
-                  <SelectValue />
+                  {loadingCurrencies ? (
+                    <div className="flex items-center">
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      <span>Loading currencies...</span>
+                    </div>
+                  ) : (
+                    <SelectValue />
+                  )}
                 </SelectTrigger>
                 <SelectContent>
-                  {CURRENCIES.map((currency) => (
+                  {currencies.map((currency) => (
                     <SelectItem key={currency.code} value={currency.code}>
-                      {currency.symbol} {currency.code}
+                      <div className="flex items-center justify-between w-full">
+                        <span>{currency.symbol} {currency.code}</span>
+                        <span className="text-xs text-gray-500 ml-2">{currency.name}</span>
+                      </div>
                     </SelectItem>
                   ))}
                 </SelectContent>
