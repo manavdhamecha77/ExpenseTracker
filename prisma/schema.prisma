@@ -13,6 +13,8 @@ model Company {
   name          String
   country       String    // ISO code or name
   currency      String    // e.g., "INR", "USD"
+  description   String?
+  industry      String?
   createdAt     DateTime  @default(now())
   users         User[]
   expenses      Expense[]

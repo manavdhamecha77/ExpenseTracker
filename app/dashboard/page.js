@@ -7,9 +7,9 @@ import { User, Mail, Calendar, Settings } from 'lucide-react'
 export default async function Dashboard() {
   const session = await getServerSession()
 
-  if (!session) {
-    redirect('/auth/login')
-  }
+  // if (!session) {
+  //   redirect('/auth/login')
+  // }
 
   return (
     <div className="container mx-auto px-4 py-8">

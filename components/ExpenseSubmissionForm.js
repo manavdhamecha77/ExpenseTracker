@@ -164,8 +164,8 @@ export default function ExpenseSubmissionForm() {
           receiptFile: null
         })
         
-        // Redirect to expenses list
-        router.push('/expenses')
+        // Redirect to employee dashboard
+        router.push('/employee/dashboard')
       } else {
         toast({
           title: "Error",
