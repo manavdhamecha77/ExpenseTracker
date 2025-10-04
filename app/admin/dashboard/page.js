@@ -131,7 +131,13 @@ function AdminDashboardClient() {
         throw new Error(data.error || 'Failed to send password')
       }
 
-      setMessage({ type: 'success', text: `Password sent to ${email}` })
+      // Show password in console
+      console.log('🔑 Generated Password for', email, ':', data.password)
+      
+      // Show password in alert for easy access
+      alert(`✅ Password Generated!\n\nEmail: ${email}\nPassword: ${data.password}\n\n⚠️ This password is also logged in the browser console.\n\nThe user can login with this password.`)
+      
+      setMessage({ type: 'success', text: `Password generated for ${email}! Check the alert and console.` })
     } catch (error) {
       setMessage({ type: 'error', text: error.message })
     } finally {

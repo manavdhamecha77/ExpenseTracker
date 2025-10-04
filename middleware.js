@@ -7,7 +7,7 @@ export default withAuth(
     const token = req.nextauth.token
 
     // If user is not authenticated and trying to access protected pages
-    if (!token && (pathname.startsWith('/dashboard') || pathname.startsWith('/admin'))) {
+    if (!token && (pathname.startsWith('/dashboard') || pathname.startsWith('/admin') || pathname.startsWith('/employee'))) {
       return NextResponse.redirect(new URL('/auth/login', req.url))
     }
 
@@ -26,6 +26,7 @@ export const config = {
     '/auth/register', 
     '/dashboard/:path*',
     '/admin/:path*',
+    '/employee/:path*',
     // Add other protected routes here as needed
   ]
 }

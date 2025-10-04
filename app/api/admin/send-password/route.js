@@ -37,28 +37,44 @@ export async function POST(request) {
     const randomPassword = generateRandomPassword()
     const hashedPassword = await hash(randomPassword, 12)
 
+    // 🔑 LOG PASSWORD FOR DEBUGGING (Remove in production)
+    console.log('═══════════════════════════════════════════════════════')
+    console.log('🔐 PASSWORD GENERATED FOR:', employee.name, `(${email})`)
+    console.log('📧 Email:', email)
+    console.log('🔑 Password:', randomPassword)
+    console.log('🆔 Employee ID:', employeeId)
+    console.log('🏢 Company ID:', employee.company.id)
+    console.log('═══════════════════════════════════════════════════════')
+
     // Update employee with hashed password
     await prisma.user.update({
       where: { id: employeeId },
       data: { password: hashedPassword },
     })
 
-    // Send password email
-    await sendEmployeePasswordEmail(
-      email,
-      employee.name || 'User',
-      randomPassword,
-      employee.company.id
-    )
+    // Send password email (may fail if email not configured)
+    try {
+      await sendEmployeePasswordEmail(
+        email,
+        employee.name || 'User',
+        randomPassword,
+        employee.company.id
+      )
+      console.log('✅ Email sent successfully to:', email)
+    } catch (emailError) {
+      console.log('⚠️ Email sending failed (check SMTP config):', emailError.message)
+      console.log('💡 Password is still saved and logged above!')
+    }
 
     return NextResponse.json({
       success: true,
-      message: `Password sent successfully to ${email}`,
+      message: `Password generated and saved! Check console for password.`,
+      password: randomPassword, // Temporary: included in response for debugging
     })
   } catch (error) {
-    console.error('Send password error:', error)
+    console.error('❌ Send password error:', error)
     return NextResponse.json(
-      { error: 'Failed to send password. Please try again.' },
+      { error: 'Failed to generate password. Please try again.' },
       { status: 500 }
     )
   }

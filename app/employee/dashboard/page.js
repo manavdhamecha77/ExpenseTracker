@@ -18,39 +18,41 @@ function EmployeeDashboardClient() {
   useEffect(() => {
     if (status === 'loading') return
     
-    if (!session) {
+    if (status === 'unauthenticated') {
       router.push('/auth/login')
       return
     }
 
-    // Allow ADMIN and EMPLOYEE to access this dashboard
-    if (session.user?.role && session.user.role !== 'EMPLOYEE' && session.user.role !== 'ADMIN') {
-      // Redirect other roles to their appropriate dashboard
-      if (session.user.role === 'MANAGER') {
-        router.push('/dashboard/manager')
-      } else {
-        router.push('/dashboard')
-      }
-      return
-    }
-
-    // Fetch recent expenses
-    const fetchRecentExpenses = async () => {
-      try {
-        const response = await fetch('/api/expenses/recent')
-        if (response.ok) {
-          const data = await response.json()
-          setRecentExpenses(data)
+    if (status === 'authenticated' && session?.user?.role) {
+      // Allow ADMIN and EMPLOYEE to access this dashboard
+      if (session.user.role !== 'EMPLOYEE' && session.user.role !== 'ADMIN') {
+        // Redirect other roles to their appropriate dashboard
+        if (session.user.role === 'MANAGER') {
+          router.push('/dashboard/manager')
+        } else {
+          router.push('/dashboard')
         }
-      } catch (error) {
-        console.error('Failed to fetch recent expenses:', error)
-      } finally {
-        setLoading(false)
+        return
       }
-    }
 
-    fetchRecentExpenses()
-  }, [session, status, router])
+      // Fetch recent expenses
+      const fetchRecentExpenses = async () => {
+        try {
+          const response = await fetch('/api/expenses/recent')
+          if (response.ok) {
+            const data = await response.json()
+            setRecentExpenses(data)
+          }
+        } catch (error) {
+          console.error('Failed to fetch recent expenses:', error)
+        } finally {
+          setLoading(false)
+        }
+      }
+
+      fetchRecentExpenses()
+    }
+  }, [status, session?.user?.role, router])
 
   if (status === 'loading' || loading) {
     return (
