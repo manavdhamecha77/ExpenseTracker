@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import prisma from '@/lib/prisma'
 import bcryptjs from 'bcryptjs'
 import { approvalWorkflowService } from '@/lib/approval-workflow'
 
@@ -102,6 +102,12 @@ export async function POST(request) {
     return NextResponse.json({
       success: true,
       companyId: result.company.id,
+      adminUser: {
+        id: result.adminUser.id,
+        email: result.adminUser.email,
+        name: result.adminUser.name,
+        role: result.adminUser.role,
+      },
       message: 'Company and admin account created successfully'
     })
 
