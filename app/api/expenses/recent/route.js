@@ -22,6 +22,22 @@ export async function GET() {
         description: true,
         date: true,
         status: true,
+        approvals: {
+          select: {
+            decision: true,
+            comment: true,
+            decisionAt: true,
+            approver: {
+              select: {
+                name: true,
+                email: true,
+              }
+            }
+          },
+          orderBy: {
+            decisionAt: 'desc'
+          }
+        }
       },
     })
 

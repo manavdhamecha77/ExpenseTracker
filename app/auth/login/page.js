@@ -34,9 +34,8 @@ export default function LoginPage() {
       setFormData(prev => ({ ...prev, companyId: companyIdFromUrl }))
     }
     
-    if (status === 'authenticated') {
-      router.replace('/dashboard')
-    }
+    // Don't auto-redirect if already authenticated - let user access login page
+    // They will be redirected after login based on their role
   }, [status, router, searchParams])
 
   // Show loading while checking authentication
@@ -130,12 +129,14 @@ export default function LoginPage() {
           router.push('/admin/dashboard')
         } else if (userRole === 'MANAGER') {
           router.push('/dashboard/manager')
+        } else if (userRole === 'EMPLOYEE') {
+          router.push('/employee/dashboard')
         } else if (userRole === 'FINANCE') {
           router.push('/dashboard/finance')
         } else if (userRole === 'DIRECTOR') {
           router.push('/dashboard/director')
         } else {
-          router.push('/dashboard') // Default employee dashboard
+          router.push('/dashboard') // Default dashboard
         }
       }
     } catch (error) {

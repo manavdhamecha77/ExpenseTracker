@@ -49,12 +49,30 @@ function AdminDashboardClient() {
   })
 
   useEffect(() => {
+    if (status === 'loading') return
+    
     if (status === 'unauthenticated') {
-      router.push('/company/login')
-    } else if (status === 'authenticated') {
+      router.push('/auth/login')
+      return
+    }
+    
+    if (status === 'authenticated' && session?.user?.role) {
+      // Only allow ADMIN to access this dashboard
+      if (session.user.role !== 'ADMIN') {
+        // Redirect to appropriate dashboard based on role
+        if (session.user.role === 'MANAGER') {
+          router.push('/dashboard/manager')
+        } else if (session.user.role === 'EMPLOYEE') {
+          router.push('/employee/dashboard')
+        } else {
+          router.push('/dashboard')
+        }
+        return
+      }
+      // User is ADMIN, fetch employees
       fetchEmployees()
     }
-  }, [status, router])
+  }, [status, session?.user?.role, router])
 
   const fetchEmployees = async () => {
     try {

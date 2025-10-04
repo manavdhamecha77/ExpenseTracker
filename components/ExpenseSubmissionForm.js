@@ -301,8 +301,8 @@ export default function ExpenseSubmissionForm() {
             {errors.date && <p className="text-red-500 text-sm mt-1">{errors.date}</p>}
           </div>
 
-          {/* Is Manager Checkbox */}
-          <div className="flex items-center space-x-2">
+          {/* Requires Manager Approval Checkbox */}
+          <div className="flex items-center space-x-2 p-4 border border-gray-200 rounded-lg bg-blue-50">
             <input
               id="isManager"
               type="checkbox"
@@ -310,17 +310,17 @@ export default function ExpenseSubmissionForm() {
               onChange={(e) => handleInputChange('isManager', e.target.checked)}
               className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
             />
-            <Label htmlFor="isManager" className="text-sm cursor-pointer">
-              I am a manager
+            <Label htmlFor="isManager" className="text-sm cursor-pointer font-medium">
+              Requires Manager Approval
             </Label>
           </div>
           
           {/* Information about approval workflow */}
-          <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg">
+          <div className={`p-3 border rounded-lg ${formData.isManager ? 'bg-blue-50 border-blue-200' : 'bg-gray-50 border-gray-200'}`}>
             <p className="text-sm text-gray-700">
-              <strong>Approval workflow:</strong> {formData.isManager 
-                ? 'As a manager, this expense will go through the standard manager approval workflow including your manager and other approvers.' 
-                : 'This expense will skip manager approval and go directly to other approvers (Finance, Director, etc.).'}
+              <strong>📋 Approval workflow:</strong> {formData.isManager 
+                ? '✓ This expense will be sent to your manager for approval first, then proceed to other approvers (Finance, Director, etc.) as required.' 
+                : '⚠️ This expense will skip manager approval and go directly to other approvers (Finance, Director, etc.). Use this for urgent expenses or when manager approval is not needed.'}
             </p>
           </div>
 

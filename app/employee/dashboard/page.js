@@ -7,7 +7,7 @@ import ExpenseSubmissionForm from '@/components/ExpenseSubmissionForm'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { User, Mail, Calendar, Settings } from 'lucide-react'
+import { User, Mail, Calendar, Settings, MessageSquare, CheckCircle2, XCircle } from 'lucide-react'
 
 function EmployeeDashboardClient() {
   const { data: session, status } = useSession()
@@ -23,9 +23,14 @@ function EmployeeDashboardClient() {
       return
     }
 
-    // If not an employee, send to existing dashboard
-    if (session.user?.role && session.user.role !== 'EMPLOYEE') {
-      router.push('/dashboard')
+    // Allow ADMIN and EMPLOYEE to access this dashboard
+    if (session.user?.role && session.user.role !== 'EMPLOYEE' && session.user.role !== 'ADMIN') {
+      // Redirect other roles to their appropriate dashboard
+      if (session.user.role === 'MANAGER') {
+        router.push('/dashboard/manager')
+      } else {
+        router.push('/dashboard')
+      }
       return
     }
 
@@ -149,39 +154,88 @@ function EmployeeDashboardClient() {
         <Card>
           <CardHeader>
             <CardTitle>Recent Expenses</CardTitle>
-            <CardDescription>Your latest submissions</CardDescription>
+            <CardDescription>Your latest submissions and approval feedback</CardDescription>
           </CardHeader>
           <CardContent>
             {recentExpenses.length === 0 ? (
               <p className="text-sm text-muted-foreground">No expenses submitted yet.</p>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="min-w-full text-sm">
-                  <thead>
-                    <tr className="text-left border-b">
-                      <th className="py-2 pr-4">Date</th>
-                      <th className="py-2 pr-4">Category</th>
-                      <th className="py-2 pr-4">Amount</th>
-                      <th className="py-2 pr-4">Description</th>
-                      <th className="py-2 pr-0">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {recentExpenses.map((e) => (
-                      <tr key={e.id} className="border-b last:border-b-0">
-                        <td className="py-2 pr-4">{new Date(e.date).toLocaleDateString()}</td>
-                        <td className="py-2 pr-4">{e.category}</td>
-                        <td className="py-2 pr-4 font-medium">{e.currency} {Number(e.amount).toFixed(2)}</td>
-                        <td className="py-2 pr-4 truncate max-w-[24ch]" title={e.description || ''}>{e.description || '—'}</td>
-                        <td className="py-2 pr-0">
-                          <Badge variant={e.status === 'APPROVED' ? 'default' : e.status === 'REJECTED' ? 'destructive' : 'secondary'}>
-                            {e.status}
+              <div className="space-y-4">
+                {recentExpenses.map((expense) => (
+                  <div key={expense.id} className="border rounded-lg p-4 hover:border-primary/50 transition-colors">
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <h3 className="font-semibold text-base">{expense.category}</h3>
+                          <Badge 
+                            variant={
+                              expense.status === 'APPROVED' ? 'default' : 
+                              expense.status === 'REJECTED' ? 'destructive' : 
+                              'secondary'
+                            }
+                            className={
+                              expense.status === 'APPROVED' ? 'bg-green-100 text-green-800' :
+                              expense.status === 'REJECTED' ? 'bg-red-100 text-red-800' :
+                              'bg-yellow-100 text-yellow-800'
+                            }
+                          >
+                            {expense.status}
                           </Badge>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                        </div>
+                        {expense.description && (
+                          <p className="text-sm text-muted-foreground">{expense.description}</p>
+                        )}
+                      </div>
+                      <div className="text-right">
+                        <p className="font-semibold text-lg">
+                          {expense.currency} {Number(expense.amount).toFixed(2)}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {new Date(expense.date).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Manager Feedback */}
+                    {expense.approvals && expense.approvals.length > 0 && (
+                      <div className="mt-3 pt-3 border-t space-y-2">
+                        <p className="text-sm font-medium flex items-center gap-2 text-muted-foreground">
+                          <MessageSquare className="h-4 w-4" />
+                          Manager Feedback
+                        </p>
+                        {expense.approvals.map((approval, idx) => (
+                          <div 
+                            key={idx} 
+                            className={`text-sm p-3 rounded-md ${
+                              approval.decision === 'APPROVE' 
+                                ? 'bg-green-50 border border-green-200' 
+                                : 'bg-red-50 border border-red-200'
+                            }`}
+                          >
+                            <div className="flex items-start gap-2">
+                              {approval.decision === 'APPROVE' ? (
+                                <CheckCircle2 className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+                              ) : (
+                                <XCircle className="h-4 w-4 text-red-600 mt-0.5 flex-shrink-0" />
+                              )}
+                              <div className="flex-1">
+                                <p className="font-medium text-foreground">
+                                  {approval.approver?.name || 'Manager'}
+                                </p>
+                                {approval.comment && (
+                                  <p className="text-muted-foreground mt-1">{approval.comment}</p>
+                                )}
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  {new Date(approval.decisionAt).toLocaleString()}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
               </div>
             )}
           </CardContent>
