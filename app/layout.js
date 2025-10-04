@@ -1,4 +1,4 @@
-import { Inter } from 'next/font/google'
+import { Inter, Poppins, Playfair_Display } from 'next/font/google'
 import { getServerSession } from 'next-auth'
 import SessionProviderWrapper from '@/components/SessionProvider'
 import Navbar from '@/components/Navbar'
@@ -7,18 +7,38 @@ import { Toaster } from '@/components/ui/toaster'
 import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 import '@/styles/globals.css'
 
-const inter = Inter({ subsets: ['latin'] })
+const inter = Inter({ 
+  subsets: ['latin'],
+  variable: '--font-inter',
+  display: 'swap',
+})
+
+const poppins = Poppins({ 
+  weight: ['400', '500', '600', '700', '800'],
+  subsets: ['latin'],
+  variable: '--font-poppins',
+  display: 'swap',
+})
+
+const playfair = Playfair_Display({ 
+  weight: ['400', '500', '600', '700', '800'],
+  style: ['normal', 'italic'],
+  subsets: ['latin'],
+  variable: '--font-playfair',
+  display: 'swap',
+})
 
 export const metadata = {
-  title: 'Oddo Hackathon App',
-  description: 'A professional hackathon-ready Next.js application with authentication',
+  title: 'ExpenseFlow - Simplify Your Expense Management',
+  description: 'Automate expense claims, customize approval flows, and gain full financial transparency with ExpenseFlow.',
+  keywords: 'expense management, expense tracking, reimbursement, approval workflow, OCR receipts',
 }
 
 export default async function RootLayout({ children }) {
   const session = await getServerSession(authOptions)
 
   return (
-    <html lang="en">
+    <html lang="en" className={`${inter.variable} ${poppins.variable} ${playfair.variable}`}>
       <body className={inter.className}>
         <SessionProviderWrapper session={session}>
           <div className="min-h-screen bg-background flex flex-col">

@@ -36,18 +36,36 @@ export default function Navbar() {
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
           <Link href="/" className="flex items-center space-x-2">
-            <div className="text-2xl font-bold text-primary">
-              App
+            <div className="text-2xl font-playfair font-bold text-primary">
+              ExpenseFlow
             </div>
           </Link>
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-8">
             <Link
-              href="/"
-              className="text-foreground hover:text-primary transition-colors"
+              href="#features"
+              className="font-playfair text-foreground/80 hover:text-primary transition-colors font-medium"
             >
-              Home
+              Features
+            </Link>
+            <Link
+              href="#pricing"
+              className="font-playfair text-foreground/80 hover:text-primary transition-colors font-medium"
+            >
+              Pricing
+            </Link>
+            <Link
+              href="#about"
+              className="font-playfair text-foreground/80 hover:text-primary transition-colors font-medium"
+            >
+              About Us
+            </Link>
+            <Link
+              href="#contact"
+              className="font-playfair text-foreground/80 hover:text-primary transition-colors font-medium"
+            >
+              Contact
             </Link>
             
             {status === 'loading' ? (
@@ -58,7 +76,7 @@ export default function Navbar() {
               <>
                 <Link
                   href="/dashboard"
-                  className="text-foreground hover:text-primary transition-colors"
+                  className="font-playfair text-foreground hover:text-primary transition-colors"
                 >
                   Dashboard
                 </Link>
@@ -69,13 +87,13 @@ export default function Navbar() {
             ) : (
               <div className="flex items-center space-x-4">
                 <Link href="/auth/login">
-                  <Button variant="ghost">
-                    Login
+                  <Button variant="ghost" className="text-foreground/80">
+                    Log In
                   </Button>
                 </Link>
                 <Link href="/auth/register">
-                  <Button>
-                    Register
+                  <Button className="bg-accent hover:bg-accent/90 text-white">
+                    Sign Up Free
                   </Button>
                 </Link>
               </div>
@@ -104,11 +122,32 @@ export default function Navbar() {
           <div className="md:hidden">
             <div className="px-2 pt-2 pb-3 space-y-1 border-t">
               <Link
-                href="/"
-                className="block px-3 py-2 text-base font-medium text-foreground hover:text-primary transition-colors"
+                href="#features"
+                className="font-playfair block px-3 py-2 text-base font-medium text-foreground hover:text-primary transition-colors"
                 onClick={() => setIsMenuOpen(false)}
               >
-                Home
+                Features
+              </Link>
+              <Link
+                href="#pricing"
+                className="font-playfair block px-3 py-2 text-base font-medium text-foreground hover:text-primary transition-colors"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                Pricing
+              </Link>
+              <Link
+                href="#about"
+                className="font-playfair block px-3 py-2 text-base font-medium text-foreground hover:text-primary transition-colors"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                About Us
+              </Link>
+              <Link
+                href="#contact"
+                className="font-playfair block px-3 py-2 text-base font-medium text-foreground hover:text-primary transition-colors"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                Contact
               </Link>
               
               {status === 'loading' ? (
