@@ -16,16 +16,25 @@ function EmployeeDashboardClient() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (status === 'loading') return
+    console.log('🔍 Employee Dashboard - Status:', status, 'Role:', session?.user?.role)
+    
+    if (status === 'loading') {
+      console.log('⏳ Still loading session...')
+      return
+    }
     
     if (status === 'unauthenticated') {
+      console.log('❌ Unauthenticated - redirecting to login')
       router.push('/auth/login')
       return
     }
 
     if (status === 'authenticated' && session?.user?.role) {
+      console.log('✅ Authenticated with role:', session.user.role)
+      
       // Allow ADMIN and EMPLOYEE to access this dashboard
       if (session.user.role !== 'EMPLOYEE' && session.user.role !== 'ADMIN') {
+        console.log('🚫 Wrong role, redirecting...')
         // Redirect other roles to their appropriate dashboard
         if (session.user.role === 'MANAGER') {
           router.push('/dashboard/manager')
@@ -35,6 +44,8 @@ function EmployeeDashboardClient() {
         return
       }
 
+      console.log('✅ Access granted! Fetching expenses...')
+      
       // Fetch recent expenses
       const fetchRecentExpenses = async () => {
         try {
@@ -42,6 +53,7 @@ function EmployeeDashboardClient() {
           if (response.ok) {
             const data = await response.json()
             setRecentExpenses(data)
+            console.log('✅ Expenses loaded:', data.length)
           }
         } catch (error) {
           console.error('Failed to fetch recent expenses:', error)
@@ -66,7 +78,8 @@ function EmployeeDashboardClient() {
     )
   }
 
-  if (!session) {
+  // Don't render anything if not authenticated - useEffect will handle redirect
+  if (status === 'unauthenticated' || !session) {
     return null
   }
 

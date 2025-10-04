@@ -6,16 +6,25 @@ export default withAuth(
     const { pathname } = req.nextUrl
     const token = req.nextauth.token
 
-    // If user is not authenticated and trying to access protected pages
+    console.log('🔍 Middleware check:', { pathname, hasToken: !!token })
+
+    // Only redirect to login if there's definitely no token
+    // Let the client-side components handle authenticated redirects
     if (!token && (pathname.startsWith('/dashboard') || pathname.startsWith('/admin') || pathname.startsWith('/employee'))) {
+      console.log('❌ No token, redirecting to login from:', pathname)
       return NextResponse.redirect(new URL('/auth/login', req.url))
     }
 
+    console.log('✅ Middleware passed for:', pathname)
     return NextResponse.next()
   },
   {
     callbacks: {
-      authorized: () => true, // Allow all requests to reach the middleware
+      authorized: ({ token }) => {
+        // Return true to allow the request to continue
+        // This allows the middleware function above to handle the logic
+        return true
+      },
     },
   }
 )
