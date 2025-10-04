@@ -4,6 +4,141 @@ import { useState, useEffect } from 'react';
 import { useFormState, useFormStatus } from 'react-dom';
 import { scanAndFillForm } from './actions';
 
+// Utility function to clean price from API response and extract numeric value
+const cleanPrice = (priceString) => {
+  if (!priceString) return '';
+  // Remove currency symbols and keep only numbers and decimal point
+  return priceString.toString().replace(/[^0-9.-]/g, '').trim();
+};
+
+// Currency search component
+function CurrencySearchDropdown({ value, onChange, currentCurrency }) {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [currencies, setCurrencies] = useState([]);
+  const [filteredCurrencies, setFilteredCurrencies] = useState([]);
+  const [isOpen, setIsOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch currencies from REST Countries API
+  useEffect(() => {
+    const fetchCurrencies = async () => {
+      try {
+        const response = await fetch('https://restcountries.com/v3.1/all?fields=name,currencies');
+        const countries = await response.json();
+        
+        const currencyMap = new Map();
+        
+        countries.forEach(country => {
+          if (country.currencies) {
+            Object.entries(country.currencies).forEach(([code, details]) => {
+              if (details.name && details.symbol) {
+                currencyMap.set(code, {
+                  code,
+                  name: details.name,
+                  symbol: details.symbol
+                });
+              }
+            });
+          }
+        });
+        
+        const uniqueCurrencies = Array.from(currencyMap.values())
+          .sort((a, b) => a.name.localeCompare(b.name));
+        
+        setCurrencies(uniqueCurrencies);
+        setFilteredCurrencies(uniqueCurrencies);
+        setLoading(false);
+      } catch (error) {
+        console.error('Failed to fetch currencies:', error);
+        // Fallback currencies
+        const fallbackCurrencies = [
+          { code: 'USD', symbol: '$', name: 'United States dollar' },
+          { code: 'EUR', symbol: '€', name: 'Euro' },
+          { code: 'GBP', symbol: '£', name: 'British pound' },
+          { code: 'INR', symbol: '₹', name: 'Indian rupee' },
+          { code: 'JPY', symbol: '¥', name: 'Japanese yen' },
+          { code: 'CAD', symbol: '$', name: 'Canadian dollar' },
+        ];
+        setCurrencies(fallbackCurrencies);
+        setFilteredCurrencies(fallbackCurrencies);
+        setLoading(false);
+      }
+    };
+
+    fetchCurrencies();
+  }, []);
+
+  // Filter currencies based on search term
+  useEffect(() => {
+    const filtered = currencies.filter(currency =>
+      currency.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      currency.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      currency.symbol.includes(searchTerm)
+    );
+    setFilteredCurrencies(filtered);
+  }, [searchTerm, currencies]);
+
+  const handleSelect = (currency) => {
+    onChange(currency.code);
+    setSearchTerm('');
+    setIsOpen(false);
+  };
+
+  const displayValue = currentCurrency ? 
+    `${currentCurrency.symbol} ${currentCurrency.code} - ${currentCurrency.name}` : 
+    'Search currencies...';
+
+  return (
+    <div className="relative">
+      <div className="relative">
+        <input
+          type="text"
+          value={isOpen ? searchTerm : displayValue}
+          onChange={(e) => {
+            setSearchTerm(e.target.value);
+            setIsOpen(true);
+          }}
+          onFocus={() => setIsOpen(true)}
+          placeholder="Search currencies..."
+          className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+          disabled={loading}
+        />
+        {loading && (
+          <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+            <div className="animate-spin h-4 w-4 border-2 border-blue-500 border-t-transparent rounded-full"></div>
+          </div>
+        )}
+      </div>
+      
+      {isOpen && !loading && (
+        <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
+          {filteredCurrencies.length > 0 ? (
+            filteredCurrencies.map((currency) => (
+              <div
+                key={currency.code}
+                onClick={() => handleSelect(currency)}
+                className="px-3 py-2 cursor-pointer hover:bg-gray-100 flex items-center justify-between"
+              >
+                <span className="font-medium">{currency.symbol} {currency.code}</span>
+                <span className="text-gray-600 text-sm truncate ml-2">{currency.name}</span>
+              </div>
+            ))
+          ) : (
+            <div className="px-3 py-2 text-gray-500">No currencies found</div>
+          )}
+        </div>
+      )}
+      
+      {isOpen && (
+        <div 
+          className="fixed inset-0 z-0" 
+          onClick={() => setIsOpen(false)}
+        ></div>
+      )}
+    </div>
+  );
+}
+
 // A helper component to show a loading state on the scan button
 function ScanButton() {
   const { pending } = useFormStatus();
@@ -23,9 +158,28 @@ export default function ExpensePage() {
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [total, setTotal] = useState('');
   const [category, setCategory] = useState('General');
+  const [currency, setCurrency] = useState('USD');
+  const [currencies, setCurrencies] = useState([]);
   const [lineItems, setLineItems] = useState([
     { itemName: '', quantity: 1, price: '' },
   ]);
+  
+  // Get current currency symbol
+  const currentCurrency = currencies.find(c => c.code === currency);
+
+  // Load initial currencies for fallback
+  useEffect(() => {
+    if (currencies.length === 0) {
+      setCurrencies([
+        { code: 'USD', symbol: '$', name: 'United States dollar' },
+        { code: 'EUR', symbol: '€', name: 'Euro' },
+        { code: 'GBP', symbol: '£', name: 'British pound' },
+        { code: 'INR', symbol: '₹', name: 'Indian rupee' },
+        { code: 'JPY', symbol: '¥', name: 'Japanese yen' },
+        { code: 'CAD', symbol: '$', name: 'Canadian dollar' },
+      ]);
+    }
+  }, [currencies]);
 
   // useFormState hook to manage the Server Action for OCR
   const initialState = { status: null, message: null, data: null };
@@ -35,10 +189,19 @@ export default function ExpensePage() {
   useEffect(() => {
     if (state.status === 'success' && state.data) {
       const { total_amount, transaction_date, category, line_items } = state.data;
-      setTotal(total_amount || '');
+      
+      // Clean and set total amount
+      setTotal(cleanPrice(total_amount) || '');
       setDate(transaction_date || new Date().toISOString().split('T')[0]);
       setCategory(category || 'General');
-      setLineItems(line_items || [{ itemName: '', quantity: 1, price: '' }]);
+      
+      // Clean prices in line items
+      const cleanedLineItems = (line_items || []).map(item => ({
+        ...item,
+        price: cleanPrice(item.price) || ''
+      }));
+      
+      setLineItems(cleanedLineItems.length > 0 ? cleanedLineItems : [{ itemName: '', quantity: 1, price: '' }]);
     }
   }, [state]);
 
@@ -61,9 +224,16 @@ export default function ExpensePage() {
   
   const handleManualSubmit = (event) => {
     event.preventDefault();
-    const expenseData = { date, total, category, lineItems };
+    const expenseData = { 
+      date, 
+      total, 
+      category, 
+      currency: currency,
+      currencySymbol: currentCurrency?.symbol,
+      lineItems 
+    };
     console.log('--- Manual Submission ---', expenseData);
-    alert('Expense saved! Check the browser console for the data.');
+    alert(`Expense saved! Total: ${currentCurrency?.symbol}${total}. Check the browser console for the data.`);
   };
 
   return (
@@ -103,8 +273,32 @@ export default function ExpensePage() {
                     <input type="date" id="date" value={date} onChange={(e) => setDate(e.target.value)} required className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"/>
                 </div>
                 <div>
-                    <label htmlFor="total" className="block text-sm font-medium text-gray-700">Total Amount</label>
-                    <input type="number" id="total" step="0.01" placeholder="0.00" value={total} onChange={(e) => setTotal(e.target.value)} required className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"/>
+                    <label htmlFor="total" className="block text-sm font-medium text-gray-700">Total Amount ({currentCurrency?.symbol})</label>
+                    <div className="relative">
+                        <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">
+                            {currentCurrency?.symbol}
+                        </span>
+                        <input 
+                            type="number" 
+                            id="total" 
+                            step="0.01" 
+                            placeholder="0.00" 
+                            value={total} 
+                            onChange={(e) => setTotal(e.target.value)} 
+                            required 
+                            className="mt-1 block w-full pl-8 pr-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                        />
+                    </div>
+                </div>
+            </div>
+            <div className="grid grid-cols-1 gap-4">
+                <div>
+                    <label className="block text-sm font-medium text-gray-700">Currency</label>
+                    <CurrencySearchDropdown 
+                        value={currency} 
+                        onChange={setCurrency} 
+                        currentCurrency={currentCurrency}
+                    />
                 </div>
             </div>
              <div>
@@ -124,9 +318,14 @@ export default function ExpensePage() {
                 <div className="space-y-3">
                     {lineItems.map((item, index) => (
                         <div key={index} className="grid grid-cols-12 gap-2 items-center">
-                            <input type="text" name="itemName" placeholder="Item Name" value={item.itemName} onChange={e => handleItemChange(index, e)} className="col-span-6 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"/>
+                            <input type="text" name="itemName" placeholder="Item Name" value={item.itemName} onChange={e => handleItemChange(index, e)} className="col-span-5 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"/>
                             <input type="number" name="quantity" placeholder="Qty" value={item.quantity} onChange={e => handleItemChange(index, e)} className="col-span-2 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"/>
-                            <input type="number" name="price" placeholder="Price" step="0.01" value={item.price} onChange={e => handleItemChange(index, e)} className="col-span-3 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"/>
+                            <div className="col-span-4 relative">
+                                <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">
+                                    {currentCurrency?.symbol}
+                                </span>
+                                <input type="number" name="price" placeholder="0.00" step="0.01" value={item.price} onChange={e => handleItemChange(index, e)} className="block w-full pl-6 pr-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"/>
+                            </div>
                             <button type="button" onClick={() => handleRemoveItem(index)} className="col-span-1 text-red-500 hover:text-red-700 font-bold">X</button>
                         </div>
                     ))}
