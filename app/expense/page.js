@@ -222,7 +222,7 @@ export default function ExpensePage() {
     setLineItems(values);
   };
   
-  const handleManualSubmit = (event) => {
+  const handleManualSubmit = async (event) => {
     event.preventDefault();
     const expenseData = { 
       date, 
@@ -232,8 +232,27 @@ export default function ExpensePage() {
       currencySymbol: currentCurrency?.symbol,
       lineItems 
     };
-    console.log('--- Manual Submission ---', expenseData);
-    alert(`Expense saved! Total: ${currentCurrency?.symbol}${total}. Check the browser console for the data.`);
+    
+    try {
+      console.log('--- Manual Submission ---', expenseData);
+      
+      // Import the server action dynamically
+      const { saveToDraft } = await import('./saveToDraft');
+      const result = await saveToDraft(expenseData);
+      
+      if (result.success) {
+        alert(`${result.message} Total: ${currentCurrency?.symbol}${total}`);
+        // Reset form
+        setTotal('');
+        setLineItems([{ itemName: '', quantity: 1, price: '' }]);
+      } else {
+        alert(`Error: ${result.message}`);
+      }
+      
+    } catch (error) {
+      console.error('Error saving expense:', error);
+      alert('Failed to save expense. Please try again.');
+    }
   };
 
   return (
