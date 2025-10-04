@@ -1,37 +1,324 @@
+// Enhanced Prisma schema for complex approval workflows
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = env("DB_PROVIDER") // "sqlite" for dev, "postgresql" for prod
   url      = env("DATABASE_URL")
 }
 
-model User {
+model Company {
   id            String    @id @default(cuid())
-  name          String?
-  email         String    @unique
-  password      String?   // hashed password; optional for OAuth users
-  emailVerified DateTime?
-  image         String?
+  name          String
+  country       String    // ISO code or name
+  currency      String    // e.g., "INR", "USD"
   createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  accounts      Account[]
-  sessions      Session[]
+  users         User[]
+  expenses      Expense[]
+  settings      CompanySetting?
+  approvalRules ApprovalRule[]
+  approvalWorkflows ApprovalWorkflow[]
 }
 
+model CompanySetting {
+  id                String   @id @default(cuid())
+  companyId         String   @unique
+  approvalRequired  Boolean  @default(true)
+  managerApprovalFirst Boolean @default(true) // Manager approval required first
+  sequentialApproval Boolean @default(true)   // Sequential vs parallel approval
+  company           Company  @relation(fields: [companyId], references: [id])
+}
+
+model User {
+  id          String   @id @default(cuid())
+  name        String?
+  email       String   @unique
+  password    String?  // hashed
+  role        Role     @default(EMPLOYEE)
+  companyId   String
+  company     Company  @relation(fields: [companyId], references: [id])
+  managerOf   EmployeeManager[]  @relation("manager")
+  reportsTo   EmployeeManager[]  @relation("employee")
+  accounts    Account[]
+  sessions    Session[]
+  
+  // Expense relationships
+  submittedExpenses Expense[] @relation("submitter")
+  expenseApprovers  ExpenseApprover[]
+  approvalDecisions ApprovalDecision[]
+  
+  // Approval workflow relationships
+  workflowSteps     ApprovalWorkflowStep[]
+  specificApprovalRules ApprovalRule[] @relation("SpecificApprover")
+  
+  createdAt   DateTime @default(now())
+}
+
+model EmployeeManager {
+  id         String @id @default(cuid())
+  employeeId String
+  managerId  String
+  employee   User   @relation("employee", fields: [employeeId], references: [id])
+  manager    User   @relation("manager", fields: [managerId], references: [id])
+  
+  @@unique([employeeId, managerId])
+}
+
+enum Role {
+  ADMIN
+  MANAGER
+  EMPLOYEE
+  FINANCE
+  DIRECTOR
+}
+
+model Expense {
+  id              String       @id @default(cuid())
+  companyId       String
+  submittedById   String
+  amount          Float        // original amount
+  currency        String       // original currency e.g., "USD"
+  amountInCompany Float?       // derived using rates
+  category        String
+  description     String?
+  date            DateTime
+  status          ExpenseStatus @default(PENDING)
+  
+  // Workflow tracking
+  currentStep     Int?         // Current step in approval workflow
+  workflowId      String?      // Reference to approval workflow
+  
+  createdAt       DateTime     @default(now())
+  items           Json?        // optional lines
+  receiptId       String?
+  
+  // Relationships
+  company         Company      @relation(fields: [companyId], references: [id])
+  submitter       User         @relation("submitter", fields: [submittedById], references: [id])
+  workflow        ApprovalWorkflow? @relation(fields: [workflowId], references: [id])
+  
+  // Approval tracking
+  approvers       ExpenseApprover[]
+  approvals       ApprovalDecision[]
+  approvalHistory ApprovalHistory[]
+}
+
+enum ExpenseStatus {
+  PENDING
+  IN_PROGRESS     // Currently being reviewed
+  APPROVED
+  REJECTED
+  PARTIALLY_APPROVED
+  ESCALATED
+  AUTO_APPROVED   // Approved via rules
+}
+
+// Enhanced ExpenseApprover model for complex workflows
+model ExpenseApprover {
+  id            String   @id @default(cuid())
+  expenseId     String
+  approverId    String
+  sequenceOrder Int      // 1,2,3... controls sequential flow
+  isManager     Boolean  @default(false) // if approver is the manager
+  isRequired    Boolean  @default(true)  // Required for approval vs optional
+  isActive      Boolean  @default(true)  // Currently active in workflow
+  canBypass     Boolean  @default(false) // Can bypass remaining steps
+  
+  // Status tracking
+  status        ApproverStatus @default(PENDING)
+  notifiedAt    DateTime?
+  
+  expense       Expense  @relation(fields: [expenseId], references: [id])
+  approver      User     @relation(fields: [approverId], references: [id])
+  createdAt     DateTime @default(now())
+  
+  @@unique([expenseId, approverId]) // Prevent duplicate approvers
+  @@index([expenseId, sequenceOrder]) // Optimize sequence queries
+}
+
+enum ApproverStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  SKIPPED
+  BYPASSED
+}
+
+model ApprovalDecision {
+  id           String   @id @default(cuid())
+  expenseId    String
+  approverId   String
+  decision     Decision // APPROVE or REJECT
+  comment      String?
+  
+  // Additional metadata
+  stepNumber   Int?     // Which step in workflow this was
+  bypassedSteps String? // JSON array of steps that were bypassed
+  
+  createdAt    DateTime @default(now())
+  decisionAt   DateTime @default(now())
+  
+  expense      Expense  @relation(fields: [expenseId], references: [id])
+  approver     User     @relation(fields: [approverId], references: [id])
+  
+  @@index([expenseId, stepNumber])
+}
+
+enum Decision {
+  APPROVE
+  REJECT
+}
+
+// Enhanced ApprovalRule model for complex conditions
+model ApprovalRule {
+  id           String   @id @default(cuid())
+  companyId    String
+  name         String
+  description  String?
+  isActive     Boolean  @default(true)
+  
+  // Rule types and conditions
+  ruleType     ApprovalRuleType
+  
+  // Percentage-based rules
+  thresholdPct Float?   // e.g., 60 for 60%
+  minimumApprovers Int? // Minimum number of approvers needed
+  
+  // Specific approver rules
+  specificUserId String? // if set, approval by this user auto-approves
+  specificUser   User?   @relation("SpecificApprover", fields: [specificUserId], references: [id])
+  
+  // Amount-based conditions
+  minAmount    Float?   // Rule applies if expense >= this amount
+  maxAmount    Float?   // Rule applies if expense <= this amount
+  currency     String?  // Currency for amount conditions
+  
+  // Category/Department conditions
+  categories   String?  // JSON array of applicable categories
+  departments  String?  // JSON array of applicable departments
+  
+  // Priority and ordering
+  priority     Int      @default(1) // Higher number = higher priority
+  canBypass    Boolean  @default(false) // Can this rule bypass others
+  
+  createdAt    DateTime @default(now())
+  company      Company  @relation(fields: [companyId], references: [id])
+  
+  @@index([companyId, isActive])
+}
+
+enum ApprovalRuleType {
+  PERCENTAGE    // Percentage of approvers must approve
+  SPECIFIC_USER // Specific user approval auto-approves
+  HYBRID        // Combination of percentage OR specific user
+  SEQUENTIAL    // All approvers in sequence must approve
+  CONDITIONAL   // Complex conditional logic
+}
+
+// Approval Workflow Templates
+model ApprovalWorkflow {
+  id          String   @id @default(cuid())
+  companyId   String
+  name        String
+  description String?
+  isDefault   Boolean  @default(false)
+  isActive    Boolean  @default(true)
+  
+  // Workflow configuration
+  enforceSequence Boolean @default(true) // Sequential vs parallel
+  allowSkipping   Boolean @default(false) // Allow skipping steps
+  requireManager  Boolean @default(true)  // Always include manager first
+  
+  // Conditions for when this workflow applies
+  minAmount   Float?
+  maxAmount   Float?
+  categories  String? // JSON array
+  departments String? // JSON array
+  
+  company     Company  @relation(fields: [companyId], references: [id])
+  steps       ApprovalWorkflowStep[]
+  expenses    Expense[]
+  
+  createdAt   DateTime @default(now())
+  
+  @@index([companyId, isActive, isDefault])
+}
+
+// Individual steps in approval workflows
+model ApprovalWorkflowStep {
+  id          String   @id @default(cuid())
+  workflowId  String
+  stepNumber  Int      // 1, 2, 3, etc.
+  stepName    String   // e.g., "Manager Approval", "Finance Review"
+  
+  // Step configuration
+  approverId  String?  // Specific user (optional)
+  approverRole Role?   // Or by role
+  isManagerStep Boolean @default(false) // Is this the manager step
+  isRequired  Boolean @default(true)
+  canBypass   Boolean @default(false)
+  
+  // Conditional logic
+  conditions  String? // JSON conditions for when step applies
+  
+  workflow    ApprovalWorkflow @relation(fields: [workflowId], references: [id])
+  approver    User? @relation(fields: [approverId], references: [id])
+  
+  @@unique([workflowId, stepNumber])
+  @@index([workflowId, stepNumber])
+}
+
+// Approval History for audit trail
+model ApprovalHistory {
+  id          String   @id @default(cuid())
+  expenseId   String
+  action      ApprovalAction
+  performedBy String   // User ID
+  fromStatus  ExpenseStatus?
+  toStatus    ExpenseStatus?
+  comment     String?
+  metadata    Json?    // Additional context/data
+  
+  createdAt   DateTime @default(now())
+  expense     Expense  @relation(fields: [expenseId], references: [id])
+  
+  @@index([expenseId, createdAt])
+}
+
+enum ApprovalAction {
+  SUBMITTED
+  APPROVED
+  REJECTED
+  ESCALATED
+  BYPASSED
+  AUTO_APPROVED
+  WITHDRAWN
+  MODIFIED
+}
+
+// Receipt OCR (unchanged)
+model ReceiptOCR {
+  id          String @id @default(cuid())
+  expenseId   String?
+  text        String
+  parsedJson  Json?
+  createdAt   DateTime @default(now())
+}
+
+// NextAuth models (unchanged)
 model Account {
   id                String  @id @default(cuid())
   userId            String
   type              String
   provider          String
   providerAccountId String
-  refresh_token     String?
-  access_token      String?
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
   expires_at        Int?
   token_type        String?
   scope             String?
-  id_token          String?
+  id_token          String? @db.Text
   session_state     String?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -44,14 +331,5 @@ model Session {
   sessionToken String   @unique
   userId       String
   expires      DateTime
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
-model VerificationToken {
-  identifier String
-  token      String   @unique
-  expires    DateTime
-
-  @@unique([identifier, token])
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
