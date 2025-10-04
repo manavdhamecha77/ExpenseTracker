@@ -24,8 +24,7 @@ function EmployeeDashboardClient() {
     }
     
     if (status === 'unauthenticated') {
-      console.log('❌ Unauthenticated - redirecting to login')
-      router.push('/auth/login')
+      console.log('⚠️ Employee Dashboard: User not authenticated - middleware should handle redirect')
       return
     }
 

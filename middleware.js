@@ -8,11 +8,10 @@ export default withAuth(
 
     console.log('🔍 Middleware check:', { pathname, hasToken: !!token })
 
-    // Only redirect to login if there's definitely no token
-    // Let the client-side components handle authenticated redirects
+    // REMOVED: No automatic redirects to /auth/login
+    // Let pages handle their own authentication flow
     if (!token && (pathname.startsWith('/dashboard') || pathname.startsWith('/admin') || pathname.startsWith('/employee'))) {
-      console.log('❌ No token, redirecting to login from:', pathname)
-      return NextResponse.redirect(new URL('/auth/login', req.url))
+      console.log('⚠️ No token for protected route:', pathname, '- allowing through')
     }
 
     console.log('✅ Middleware passed for:', pathname)
@@ -21,8 +20,8 @@ export default withAuth(
   {
     callbacks: {
       authorized: ({ token }) => {
-        // Return true to allow the request to continue
-        // This allows the middleware function above to handle the logic
+        // Return true to allow all requests through
+        // No automatic redirects to login
         return true
       },
     },

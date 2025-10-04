@@ -51,8 +51,9 @@ function AdminDashboardClient() {
   useEffect(() => {
     if (status === 'loading') return
     
+    // Removed redirect to /auth/login - let middleware handle it
     if (status === 'unauthenticated') {
-      router.push('/auth/login')
+      console.log('⚠️ Admin Dashboard: User not authenticated')
       return
     }
     

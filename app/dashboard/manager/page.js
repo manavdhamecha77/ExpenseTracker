@@ -51,8 +51,8 @@ export default function ManagerDashboard() {
   useEffect(() => {
     if (status === 'loading') return
     
-    if (!session) {
-      router.push('/auth/login')
+    if (status === 'unauthenticated' || !session) {
+      console.log('⚠️ Manager Dashboard: User not authenticated')
       return
     }
 
