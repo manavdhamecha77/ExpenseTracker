@@ -21,6 +21,7 @@ export async function POST(req) {
         category: form.get('category'),
         description: form.get('description') || '',
         date: form.get('date'),
+        isManager: form.get('isManager'),
         // If you later support file upload storage, you can handle 'receipt' here
       }
     } else {
@@ -36,6 +37,7 @@ export async function POST(req) {
     const category = String(payload.category || '').trim()
     const description = String(payload.description || '').trim()
     const dateInput = payload.date ? new Date(payload.date) : new Date()
+    const isManager = payload.isManager === 'true' || payload.isManager === true
 
     if (!currency) return NextResponse.json({ error: 'Currency is required' }, { status: 400 })
     if (!category) return NextResponse.json({ error: 'Category is required' }, { status: 400 })
@@ -54,6 +56,7 @@ export async function POST(req) {
         description: description || null,
         date: dateInput,
         status: 'PENDING',
+        isManager: isManager,
         items: items ? items : undefined,
       },
     })

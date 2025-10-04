@@ -86,6 +86,7 @@ model Expense {
   description     String?
   date            DateTime
   status          ExpenseStatus @default(PENDING)
+  isManager       Boolean      @default(false) // if submitter is a manager
   
   // Workflow tracking
   currentStep     Int?         // Current step in approval workflow

@@ -38,7 +38,8 @@ export default function ExpenseSubmissionForm() {
     category: '',
     description: '',
     date: new Date().toISOString().split('T')[0], // Today's date
-    receiptFile: null
+    receiptFile: null,
+    isManager: false
   })
   
   const [loading, setLoading] = useState(false)
@@ -136,6 +137,7 @@ export default function ExpenseSubmissionForm() {
       submitData.append('category', formData.category)
       submitData.append('description', formData.description)
       submitData.append('date', formData.date)
+      submitData.append('isManager', formData.isManager)
       
       if (formData.receiptFile) {
         submitData.append('receipt', formData.receiptFile)
@@ -161,7 +163,8 @@ export default function ExpenseSubmissionForm() {
           category: '',
           description: '',
           date: new Date().toISOString().split('T')[0],
-          receiptFile: null
+          receiptFile: null,
+          isManager: false
         })
         
         // Redirect to employee dashboard
@@ -296,6 +299,29 @@ export default function ExpenseSubmissionForm() {
               />
             </div>
             {errors.date && <p className="text-red-500 text-sm mt-1">{errors.date}</p>}
+          </div>
+
+          {/* Is Manager Checkbox */}
+          <div className="flex items-center space-x-2">
+            <input
+              id="isManager"
+              type="checkbox"
+              checked={formData.isManager}
+              onChange={(e) => handleInputChange('isManager', e.target.checked)}
+              className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+            />
+            <Label htmlFor="isManager" className="text-sm cursor-pointer">
+              I am a manager
+            </Label>
+          </div>
+          
+          {/* Information about approval workflow */}
+          <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg">
+            <p className="text-sm text-gray-700">
+              <strong>Approval workflow:</strong> {formData.isManager 
+                ? 'As a manager, this expense will go through the standard manager approval workflow including your manager and other approvers.' 
+                : 'This expense will skip manager approval and go directly to other approvers (Finance, Director, etc.).'}
+            </p>
           </div>
 
           {/* Receipt Upload */}
