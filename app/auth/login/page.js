@@ -127,7 +127,7 @@ export default function LoginPage() {
         
         // Redirect based on role
         if (userRole === 'ADMIN') {
-          router.push('/dashboard/admin')
+          router.push('/admin/dashboard')
         } else if (userRole === 'MANAGER') {
           router.push('/dashboard/manager')
         } else if (userRole === 'FINANCE') {
